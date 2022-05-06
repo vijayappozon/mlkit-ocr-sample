@@ -13,15 +13,16 @@ import {
 import {
   ImagePickerResponse,
   launchImageLibrary,
+  launchCamera,
 } from 'react-native-image-picker';
-import MlkitOcr, { MlkitOcrResult } from 'react-native-mlkit-ocr';
+import MlkitOcr, {MlkitOcrResult} from 'react-native-mlkit-ocr';
 
 export default function App() {
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState();
   const [image, setImage] = React.useState();
 
-  console.log("Result---", JSON.stringify(result));
+  console.log('Result---', JSON.stringify(result));
 
   if (loading) {
     return (
@@ -40,10 +41,9 @@ export default function App() {
             height: Dimensions.get('window').height,
           }}
           showsVerticalScrollIndicator
-          style={styles.scroll}
-        >
-          {result?.map((block) => {
-            return block.lines.map((line) => {
+          style={styles.scroll}>
+          {result?.map(block => {
+            return block.lines.map(line => {
               return (
                 <View
                   key={line.text}
@@ -54,23 +54,30 @@ export default function App() {
                     height: fitHeight(line.bounding.height, image?.height ?? 0),
                     left: fitWidth(line.bounding.left, image?.width ?? 0),
                     width: fitWidth(line.bounding.width, image?.width ?? 0),
-                  }}
-                >
-                  <Text style={{ fontSize: 10 }}>{line.text}</Text>
+                  }}>
+                  <Text style={{fontSize: 10}}>{line.text}</Text>
                 </View>
               );
             });
           })}
         </ScrollView>
       )}
-
-      <Button
-        onPress={() => {
-          setLoading(true);
-          launchGallery(setResult, setImage, setLoading);
-        }}
-        title="Start"
-      />
+      <View style={styles.buttonContainer}>
+        <Button
+          onPress={() => {
+            setLoading(true);
+            launchGallery(setResult, setImage, setLoading);
+          }}
+          title="Pick Photo"
+        />
+        <Button
+          onPress={() => {
+            setLoading(true);
+            lanunchCamera(setResult, setImage, setLoading);
+          }}
+          title="Take Photo"
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -90,7 +97,7 @@ function launchGallery(setResult, setImage, setLoading) {
     {
       mediaType: 'photo',
     },
-    async (response) => {
+    async response => {
       if (!response.assets[0].uri) {
         throw new Error('oh!');
       }
@@ -102,8 +109,24 @@ function launchGallery(setResult, setImage, setLoading) {
       } finally {
         setLoading(false);
       }
-    }
+    },
   );
+}
+
+function lanunchCamera(setResult, setImage, setLoading) {
+  launchCamera({mediaType: 'photo'}, async response => {
+    if (!response.assets[0].uri) {
+      throw new Error('oh!');
+    }
+    try {
+      setImage(response.assets[0]);
+      setResult(await MlkitOcr.detectFromUri(response.assets[0].uri));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  });
 }
 
 const styles = StyleSheet.create({
@@ -116,5 +139,11 @@ const styles = StyleSheet.create({
     width: '100%',
     borderColor: '#ccc',
     borderWidth: 2,
+  },
+  buttonContainer: {
+    width: Dimensions.get('window').width,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
   },
 });
